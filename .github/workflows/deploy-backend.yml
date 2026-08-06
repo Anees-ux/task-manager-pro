@@ -20,8 +20,8 @@ jobs:
 
     - name: 3. Code Build and Publish karo
       run: |
-        dotnet build --configuration Release
-        dotnet publish -c Release -o ./publish_output
+        dotnet build ./backend --configuration Release
+        dotnet publish ./backend -c Release -o ./publish_output
 
     - name: 4. Azure par Deploy karo
       uses: azure/webapps-deploy@v2
