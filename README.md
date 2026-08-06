@@ -2,6 +2,11 @@
 
 Welcome to **Task Manager Pro**! This is a comprehensive, full-stack task management solution designed to provide a robust and intuitive user experience for managing personal and team tasks.
 
+## ⏱️ Interview Assessment Context
+**Note for Reviewers:** This repository contains the result of a technical assessment completed as part of a Full Stack Developer interview process. 
+
+The entire solution—spanning the React frontend and ASP.NET Core backend—was designed, implemented, and submitted within a strict **1 hour and 15 minute timebox**. It demonstrates rapid full-stack development capabilities, familiarity with Clean Architecture, and the ability to deliver functional requirements under tight deadlines.
+
 ## 🚀 Features
 
 - **User Authentication**: Secure user registration, login, and authorization.
