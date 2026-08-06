@@ -1,0 +1,31 @@
+name: Deploy .NET 8 Backend to Azure
+
+on:
+  push:
+    branches:
+      - main 
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 1. Code uthao (Checkout)
+      uses: actions/checkout@v4
+
+    - name: 2. .NET 8 Setup karo
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: 3. Code Build and Publish karo
+      run: |
+        dotnet build --configuration Release
+        dotnet publish -c Release -o ./publish_output
+
+    - name: 4. Azure par Deploy karo
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'taskmanager-api' 
+        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        package: ./publish_output
