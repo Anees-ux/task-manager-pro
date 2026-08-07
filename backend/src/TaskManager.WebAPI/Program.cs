@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using TaskManager.Application;
 using TaskManager.Infrastructure;
 using TaskManager.Infrastructure.Data;
@@ -50,7 +50,7 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// Configure CORS for React frontend (UPDATED SECTION)
+// Configure CORS for React frontend (SIRF YEH SECTION UPDATE HUA HAI)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
@@ -59,7 +59,7 @@ builder.Services.AddCors(options =>
                 "http://localhost:5173", 
                 "http://localhost:5174", 
                 "http://localhost:3000",
-                "https://orange-river-04719080f.7.azurestaticapps.net" // <-- Azure Live Frontend URL Added Here
+                "https://orange-river-04719080f.7.azurestaticapps.net" // <-- Live Frontend URL
             )
             .AllowAnyMethod()
             .AllowAnyHeader()
@@ -67,7 +67,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Configure Swagger/OpenAPI
+// Configure Swagger/OpenAPI (AAPKA ORIGINAL CODE WAPAS AA GAYA)
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -89,17 +89,10 @@ builder.Services.AddSwaggerGen(options =>
         Description = "Enter your JWT token"
     });
 
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    options.AddSecurityRequirement(_ => new OpenApiSecurityRequirement
     {
         {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
+            new OpenApiSecuritySchemeReference("Bearer"),
             new List<string>()
         }
     });
