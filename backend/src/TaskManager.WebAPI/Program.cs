@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi;
+using Microsoft.OpenApi.Models;
 using TaskManager.Application;
 using TaskManager.Infrastructure;
 using TaskManager.Infrastructure.Data;
@@ -50,12 +50,17 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// Configure CORS for React frontend
+// Configure CORS for React frontend (UPDATED SECTION)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://localhost:5174", "http://localhost:3000")
+        policy.WithOrigins(
+                "http://localhost:5173", 
+                "http://localhost:5174", 
+                "http://localhost:3000",
+                "https://orange-river-04719080f.7.azurestaticapps.net" // <-- Azure Live Frontend URL Added Here
+            )
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials();
@@ -84,10 +89,17 @@ builder.Services.AddSwaggerGen(options =>
         Description = "Enter your JWT token"
     });
 
-    options.AddSecurityRequirement(_ => new OpenApiSecurityRequirement
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
-            new OpenApiSecuritySchemeReference("Bearer"),
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
             new List<string>()
         }
     });
