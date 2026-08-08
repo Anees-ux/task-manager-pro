@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json.Serialization;
+using Azure.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -10,6 +11,12 @@ using TaskManager.Infrastructure.Data;
 using TaskManager.WebAPI.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var keyVaultUri = builder.Configuration["KeyVaultUri"];
+if (!string.IsNullOrEmpty(keyVaultUri))
+{
+    builder.Configuration.AddAzureKeyVault(new Uri(keyVaultUri), new DefaultAzureCredential());
+}
 
 // Add services to the container
 
@@ -27,7 +34,7 @@ builder.Services.AddControllers()
 
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var secretKey = jwtSettings["SecretKey"] ?? "TaskManagerProSuperSecretKey2024!@#$%^&*()_+VeryLongKeyForSecurity";
+var secretKey = jwtSettings["SecretKey"] ?? "FakeKeyForLocalDevelopmentOnly_WillLoadFromVault";
 
 builder.Services.AddAuthentication(options =>
 {
