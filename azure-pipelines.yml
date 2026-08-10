@@ -15,8 +15,24 @@ steps:
     version: '10.x'
 
 - task: DotNetCoreCLI@2
-  displayName: 'Build the project'
+  displayName: '1. Build the project'
   inputs:
     command: 'build'
     projects: '**/*.csproj'
     arguments: '--configuration $(buildConfiguration)'
+
+- task: DotNetCoreCLI@2
+  displayName: '2. Publish (Pack into Zip)'
+  inputs:
+    command: 'publish'
+    publishWebProjects: true
+    arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+    zipAfterPublish: true
+
+- task: AzureWebApp@1
+  displayName: '3. Deploy to Azure App Service'
+  inputs:
+    azureSubscription: 'Azure-Deploy-Connection'
+    appType: 'webApp'
+    appName: 'taskmanager-api'
+    package: '$(Build.ArtifactStagingDirectory)/**/*.zip'
