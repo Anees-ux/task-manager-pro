@@ -15,7 +15,14 @@ var builder = WebApplication.CreateBuilder(args);
 var keyVaultUri = builder.Configuration["KeyVaultUri"];
 if (!string.IsNullOrEmpty(keyVaultUri))
 {
-    builder.Configuration.AddAzureKeyVault(new Uri(keyVaultUri), new DefaultAzureCredential());
+    try
+    {
+        builder.Configuration.AddAzureKeyVault(new Uri(keyVaultUri), new DefaultAzureCredential());
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Warning: Could not connect to Azure Key Vault. Using local configuration. Error: {ex.Message}");
+    }
 }
 
 // Add services to the container

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { TaskItem } from '../../types/task';
 import Badge from '../../components/common/Badge';
 import { PencilSquareIcon, TrashIcon, ClockIcon } from '@heroicons/react/24/outline';
+import './TaskCard.scss';
 
 interface TaskCardProps {
   task: TaskItem;
@@ -21,8 +22,8 @@ export default function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
 
   return (
     <div
-      className={`group relative bg-slate-800/50 border rounded-2xl p-5 hover:bg-slate-800/80 transition-all duration-200 hover:shadow-lg hover:shadow-black/20 ${
-        task.isOverdue ? 'border-red-500/40 shadow-red-500/5' : 'border-slate-700/50'
+      className={`task-card group relative bg-slate-800/50 border rounded-2xl p-5 hover:bg-slate-800/80 transition-all duration-200 hover:shadow-lg hover:shadow-black/20 ${
+        task.isOverdue ? 'task-card--overdue' : 'border-slate-700/50'
       }`}
     >
       {task.isOverdue && (
