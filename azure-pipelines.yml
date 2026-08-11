@@ -12,7 +12,7 @@ steps:
   displayName: 'Install Latest .NET 10 SDK'
   inputs:
     packageType: 'sdk'
-    version: '10.x'
+    useGlobalJson: true
 
 - task: DotNetCoreCLI@2
   displayName: '1. Build the project'
