@@ -62,6 +62,22 @@ public class IntelligenceController : ControllerBase
     }
 
     /// <summary>
+    /// Manually assign an Escalated AI decision to a chosen team member (Manual Override).
+    /// </summary>
+    [HttpPost("ai-decisions/{id:guid}/manual-assign")]
+    [ProducesResponseType(typeof(AiDecisionLedgerDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<AiDecisionLedgerDto>> ManualAssign(
+        Guid id,
+        [FromBody] ManualAssignEscalatedDecisionRequest request)
+    {
+        var command = new ManualAssignEscalatedDecisionCommand(id, request.AssigneeId, request.Notes);
+        var result = await _mediator.Send(command);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Resolve developer blockers using Google Gemini RAG with Pinecone vector memory.
     /// </summary>
     [HttpPost("resolve-blocker")]

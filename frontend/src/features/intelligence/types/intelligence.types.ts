@@ -21,6 +21,7 @@ export interface AiDecision {
   modelVersion: string;
   executionTimeMs: number;
   createdAtUtc: string;
+  rejectionCount?: number;
 }
 
 export type AiDecisionLedgerDto = AiDecision;
@@ -28,6 +29,11 @@ export type AiDecisionLedgerDto = AiDecision;
 export interface ReviewAiDecisionRequest {
   approve: boolean;
   reviewNotes?: string | null;
+}
+
+export interface ManualAssignEscalatedDecisionRequest {
+  assigneeId: string;
+  notes?: string | null;
 }
 
 export interface ResolveBlockerRequest {

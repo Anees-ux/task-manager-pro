@@ -39,6 +39,11 @@ public record ReviewAiDecisionRequest(
     string? ReviewNotes
 );
 
+public record ManualAssignEscalatedDecisionRequest(
+    Guid AssigneeId,
+    string? Notes
+);
+
 public record RippleEffectLogDto(
     Guid Id,
     Guid TriggerTaskId,

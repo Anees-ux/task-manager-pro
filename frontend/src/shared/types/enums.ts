@@ -68,11 +68,14 @@ export enum AiDecisionAction {
 }
 
 export enum AiDecisionStatus {
+  Proposed = 'Proposed',
   Pending = 'Pending',
   Applied = 'Applied',
   Approved = 'Approved',
   Rejected = 'Rejected',
+  AutoApplied = 'AutoApplied',
   Expired = 'Expired',
+  Escalated = 'Escalated',
 }
 
 export enum CapacityStatus {

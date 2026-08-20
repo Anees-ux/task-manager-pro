@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { intelligenceApi } from '../api/intelligenceApi';
-import type { ReviewAiDecisionRequest } from '../types/intelligence.types';
+import type { ReviewAiDecisionRequest, ManualAssignEscalatedDecisionRequest } from '../types/intelligence.types';
 import toast from 'react-hot-toast';
 
 export const INTELLIGENCE_KEYS = {
@@ -43,6 +43,31 @@ export function useReviewDecision() {
     onError: (error: any) => {
       const msg = error?.response?.data?.message || 'Failed to review AI decision.';
       toast.error(typeof msg === 'string' ? msg : 'Error processing review.');
+    },
+  });
+}
+
+/**
+ * Hook to manually assign an Escalated AI decision (Manual Override).
+ */
+export function useManualAssignDecision() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: ManualAssignEscalatedDecisionRequest }) =>
+      intelligenceApi.manualAssignDecision(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: INTELLIGENCE_KEYS.all });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['workforce'] });
+      toast.success('Task manually assigned & Escalation resolved! 🚀');
+    },
+    onError: (error: any) => {
+      const msg =
+        error?.response?.data?.detail ||
+        error?.response?.data?.message ||
+        'Failed to manually assign task.';
+      toast.error(typeof msg === 'string' ? msg : 'Error processing manual assignment.');
     },
   });
 }

@@ -162,6 +162,22 @@ public class AiDecisionLedger : BaseEntity
         UpdatedAtUtc = DateTime.UtcNow;
     }
 
+    /// <summary>
+    /// Manually resolves an Escalated decision when a human administrator overrides autonomous assignment.
+    /// </summary>
+    public void ManualOverride(Guid reviewedByUserId, Guid assignedUserId, string? notes = null)
+    {
+        if (Status != AiDecisionStatus.Escalated)
+            throw new InvalidOperationException($"Cannot manually override a decision in '{Status}' status. Decision must be Escalated.");
+
+        Status = AiDecisionStatus.Approved;
+        ReviewedByUserId = reviewedByUserId;
+        ReviewNotes = string.IsNullOrWhiteSpace(notes)
+            ? $"[Manual Override] Manually assigned to {assignedUserId} by human administrator."
+            : $"[Manual Override] {notes}";
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
     public void MarkAutoApplied()
     {
         Status = AiDecisionStatus.AutoApplied;

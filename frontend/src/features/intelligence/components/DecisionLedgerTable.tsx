@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { AiDecision } from '../types/intelligence.types';
 import { useReviewDecision } from '../hooks/useIntelligence';
+import { ManualAssignModal } from './ManualAssignModal';
 import { formatDate } from '@shared/lib/dateUtils';
 import {
   IconCpu,
@@ -10,6 +11,8 @@ import {
   IconChevronDown,
   IconChevronUp,
   IconBrain,
+  IconUserCheck,
+  IconAlertTriangle,
 } from '@tabler/icons-react';
 
 interface DecisionLedgerTableProps {
@@ -18,6 +21,7 @@ interface DecisionLedgerTableProps {
 
 export function DecisionLedgerTable({ decisions }: DecisionLedgerTableProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [manualAssignDecision, setManualAssignDecision] = useState<AiDecision | null>(null);
   const reviewMutation = useReviewDecision();
 
   const handleReview = (id: string, approve: boolean) => {
@@ -49,7 +53,7 @@ export function DecisionLedgerTable({ decisions }: DecisionLedgerTableProps) {
     );
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, rejectionCount?: number) => {
     switch (status) {
       case 'Approved':
       case 'Applied':
@@ -64,9 +68,16 @@ export function DecisionLedgerTable({ decisions }: DecisionLedgerTableProps) {
             Rejected
           </span>
         );
+      case 'Escalated':
+        return (
+          <span className="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-0.5 rounded-pill small d-inline-flex align-items-center gap-1 fw-semibold">
+            <IconAlertTriangle size={11} />
+            Escalated {rejectionCount ? `(${rejectionCount}x)` : ''}
+          </span>
+        );
       default:
         return (
-          <span className="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-0.5 rounded-pill small">
+          <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-0.5 rounded-pill small">
             Pending Review
           </span>
         );
@@ -74,117 +85,134 @@ export function DecisionLedgerTable({ decisions }: DecisionLedgerTableProps) {
   };
 
   return (
-    <div className="card glass-surface p-0 overflow-hidden shadow-sm border-0">
-      <div className="table-responsive">
-        <table className="table table-vcenter table-hover card-table m-0 text-nowrap">
-          <thead>
-            <tr className="bg-body-tertiary border-bottom border-secondary-subtle">
-              <th className="text-secondary small fw-bold text-uppercase py-3 ps-4" style={{ fontSize: '0.675rem', letterSpacing: '0.06em' }}>
-                AI Autonomous Agent
-              </th>
-              <th className="text-secondary small fw-bold text-uppercase py-3" style={{ fontSize: '0.675rem', letterSpacing: '0.06em' }}>
-                Action Executed
-              </th>
-              <th className="text-secondary small fw-bold text-uppercase py-3" style={{ fontSize: '0.675rem', letterSpacing: '0.06em' }}>
-                Model & Latency
-              </th>
-              <th className="text-secondary small fw-bold text-uppercase py-3 text-center" style={{ fontSize: '0.675rem', letterSpacing: '0.06em' }}>
-                Confidence Score
-              </th>
-              <th className="text-secondary small fw-bold text-uppercase py-3" style={{ fontSize: '0.675rem', letterSpacing: '0.06em' }}>
-                Status
-              </th>
-              <th className="text-secondary small fw-bold text-uppercase py-3 pe-4 text-end" style={{ fontSize: '0.675rem', letterSpacing: '0.06em' }}>
-                Human-In-The-Loop
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {decisions.map((decision) => {
-              const isExpanded = expandedId === decision.id;
+    <>
+      <div className="card glass-surface p-0 overflow-hidden shadow-sm border-0">
+        <div className="table-responsive">
+          <table className="table table-vcenter table-hover card-table m-0 text-nowrap">
+            <thead>
+              <tr className="bg-body-tertiary border-bottom border-secondary-subtle">
+                <th className="text-secondary small fw-bold text-uppercase py-3 ps-4" style={{ fontSize: '0.675rem', letterSpacing: '0.06em' }}>
+                  AI Autonomous Agent
+                </th>
+                <th className="text-secondary small fw-bold text-uppercase py-3" style={{ fontSize: '0.675rem', letterSpacing: '0.06em' }}>
+                  Action Executed
+                </th>
+                <th className="text-secondary small fw-bold text-uppercase py-3" style={{ fontSize: '0.675rem', letterSpacing: '0.06em' }}>
+                  Model & Latency
+                </th>
+                <th className="text-secondary small fw-bold text-uppercase py-3 text-center" style={{ fontSize: '0.675rem', letterSpacing: '0.06em' }}>
+                  Confidence Score
+                </th>
+                <th className="text-secondary small fw-bold text-uppercase py-3" style={{ fontSize: '0.675rem', letterSpacing: '0.06em' }}>
+                  Status
+                </th>
+                <th className="text-secondary small fw-bold text-uppercase py-3 pe-4 text-end" style={{ fontSize: '0.675rem', letterSpacing: '0.06em' }}>
+                  Human-In-The-Loop
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {decisions.map((decision) => {
+                const isExpanded = expandedId === decision.id;
+                const isEscalated = decision.status === 'Escalated';
+                const isFinalized = ['Approved', 'Applied', 'Rejected', 'Expired'].includes(decision.status);
 
-              return (
-                <React.Fragment key={decision.id}>
-                  <tr className="transition-fast border-bottom border-secondary-subtle">
-                    {/* Agent Type */}
-                    <td className="py-3.5 ps-4">
-                      <div className="d-flex align-items-center gap-2.5">
-                        <div className="p-2 rounded-3 bg-purple-subtle text-purple border border-purple-subtle flex-shrink-0">
-                          <IconCpu size={16} />
-                        </div>
-                        <div>
-                          <div className="fw-semibold text-body small">{decision.agentType || 'TaskRouter'}</div>
-                          <div className="text-muted small font-monospace" style={{ fontSize: '0.68rem' }}>
-                            ID: {decision.id.substring(0, 8)}...
+                return (
+                  <React.Fragment key={decision.id}>
+                    <tr className="transition-fast border-bottom border-secondary-subtle">
+                      {/* Agent Type */}
+                      <td className="py-3.5 ps-4">
+                        <div className="d-flex align-items-center gap-2.5">
+                          <div className="p-2 rounded-3 bg-purple-subtle text-purple border border-purple-subtle flex-shrink-0">
+                            <IconCpu size={16} />
+                          </div>
+                          <div>
+                            <div className="fw-semibold text-body small">{decision.agentType || 'TaskRouter'}</div>
+                            <div className="text-muted small font-monospace" style={{ fontSize: '0.68rem' }}>
+                              ID: {decision.id.substring(0, 8)}...
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Action Executed */}
-                    <td className="py-3.5">
-                      <span className="badge bg-body-secondary text-body border border-secondary-subtle px-2 py-1 rounded small fw-medium">
-                        {decision.action}
-                      </span>
-                    </td>
+                      {/* Action Executed */}
+                      <td className="py-3.5">
+                        <span className="badge bg-body-secondary text-body border border-secondary-subtle px-2 py-1 rounded small fw-medium">
+                          {decision.action}
+                        </span>
+                      </td>
 
-                    {/* Model & Latency */}
-                    <td className="py-3.5">
-                      <div className="small text-body fw-medium font-monospace" style={{ fontSize: '0.75rem' }}>
-                        {decision.modelVersion || 'gemini-3.5-flash'}
-                      </div>
-                      <div className="text-muted small d-flex align-items-center gap-1" style={{ fontSize: '0.68rem' }}>
-                        <IconClock size={11} />
-                        <span>{decision.executionTimeMs || 120}ms</span>
-                      </div>
-                    </td>
+                      {/* Model & Latency */}
+                      <td className="py-3.5">
+                        <div className="small text-body fw-medium font-monospace" style={{ fontSize: '0.75rem' }}>
+                          {decision.modelVersion || 'gemini-3.6-flash'}
+                        </div>
+                        <div className="text-muted small d-flex align-items-center gap-1" style={{ fontSize: '0.68rem' }}>
+                          <IconClock size={11} />
+                          <span>{decision.executionTimeMs || 120}ms</span>
+                        </div>
+                      </td>
 
-                    {/* Confidence Score (Highlighted) */}
-                    <td className="py-3.5 text-center">
-                      {getConfidenceBadge(decision.confidenceScore)}
-                    </td>
+                      {/* Confidence Score (Highlighted) */}
+                      <td className="py-3.5 text-center">
+                        {getConfidenceBadge(decision.confidenceScore)}
+                      </td>
 
-                    {/* Status */}
-                    <td className="py-3.5">{getStatusBadge(decision.status)}</td>
+                      {/* Status */}
+                      <td className="py-3.5">{getStatusBadge(decision.status, decision.rejectionCount)}</td>
 
-                    {/* Human Review Controls */}
-                    <td className="py-3.5 pe-4 text-end">
-                      <div className="d-inline-flex align-items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setExpandedId(isExpanded ? null : decision.id)}
-                          className="btn btn-sm btn-ghost-secondary px-2 py-1 rounded-2"
-                          title="View Reasoning Chain"
-                        >
-                          <span className="small me-1">Reasoning</span>
-                          {isExpanded ? <IconChevronUp size={14} /> : <IconChevronDown size={14} />}
-                        </button>
+                      {/* Human Review Controls */}
+                      <td className="py-3.5 pe-4 text-end">
+                        <div className="d-inline-flex align-items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setExpandedId(isExpanded ? null : decision.id)}
+                            className="btn btn-sm btn-ghost-secondary px-2 py-1 rounded-2"
+                            title="View Reasoning Chain"
+                          >
+                            <span className="small me-1">Reasoning</span>
+                            {isExpanded ? <IconChevronUp size={14} /> : <IconChevronDown size={14} />}
+                          </button>
 
-                        {(!['Approved', 'Applied', 'Rejected'].includes(decision.status)) && (
-                          <>
+                          {/* Escalated: Show Manual Assign Button */}
+                          {isEscalated && (
                             <button
                               type="button"
-                              onClick={() => handleReview(decision.id, true)}
-                              className="btn btn-sm btn-outline-success px-2 py-1 rounded-2"
-                              title="Approve Decision"
-                              disabled={reviewMutation.isPending}
+                              onClick={() => setManualAssignDecision(decision)}
+                              className="btn btn-sm btn-outline-warning d-inline-flex align-items-center gap-1 px-2.5 py-1 rounded-2 fw-medium shadow-sm"
+                              title="Manually Assign Task"
                             >
-                              <IconCheck size={13} />
+                              <IconUserCheck size={14} />
+                              <span className="small">Manual Assign</span>
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => handleReview(decision.id, false)}
-                              className="btn btn-sm btn-outline-danger px-2 py-1 rounded-2"
-                              title="Reject Decision"
-                              disabled={reviewMutation.isPending}
-                            >
-                              <IconX size={13} />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
+                          )}
+
+                          {/* Proposed / Pending: Show Approve and Reject Buttons */}
+                          {!isFinalized && !isEscalated && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleReview(decision.id, true)}
+                                className="btn btn-sm btn-outline-success px-2 py-1 rounded-2"
+                                title="Approve Decision"
+                                disabled={reviewMutation.isPending}
+                              >
+                                <IconCheck size={13} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleReview(decision.id, false)}
+                                className="btn btn-sm btn-outline-danger px-2 py-1 rounded-2"
+                                title="Reject Decision"
+                                disabled={reviewMutation.isPending}
+                              >
+                                <IconX size={13} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
 
                   {/* Expandable Reasoning Chain Row */}
                   {isExpanded && (
@@ -219,5 +247,13 @@ export function DecisionLedgerTable({ decisions }: DecisionLedgerTableProps) {
         </table>
       </div>
     </div>
-  );
+
+    {/* Manual Assign Modal for Escalated Decisions */}
+    <ManualAssignModal
+      open={Boolean(manualAssignDecision)}
+      onClose={() => setManualAssignDecision(null)}
+      decision={manualAssignDecision}
+    />
+  </>
+);
 }

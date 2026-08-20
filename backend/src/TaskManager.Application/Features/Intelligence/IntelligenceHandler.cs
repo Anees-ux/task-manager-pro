@@ -2,6 +2,7 @@ using MediatR;
 using TaskManager.Application.Common.Exceptions;
 using TaskManager.Application.DTOs;
 using TaskManager.Application.Interfaces;
+using TaskManager.Domain.Entities.Execution;
 using TaskManager.Domain.Entities.Intelligence;
 using TaskManager.Domain.Entities.Workforce;
 using TaskManager.Domain.Interfaces;
@@ -11,12 +12,14 @@ namespace TaskManager.Application.Features.Intelligence;
 public record GetCapacityHeatmapQuery(DateOnly StartDate, DateOnly EndDate) : IRequest<IReadOnlyList<CapacitySnapshotDto>>;
 public record GetAiDecisionsQuery(Guid? TargetEntityId = null) : IRequest<IReadOnlyList<AiDecisionLedgerDto>>;
 public record ReviewAiDecisionCommand(Guid DecisionId, bool Approve, string? ReviewNotes) : IRequest<AiDecisionLedgerDto>;
+public record ManualAssignEscalatedDecisionCommand(Guid DecisionId, Guid AssigneeId, string? Notes) : IRequest<AiDecisionLedgerDto>;
 public record ResolveBlockerQuery(string Question) : IRequest<ResolveBlockerResponse>;
 
 public class IntelligenceHandler :
     IRequestHandler<GetCapacityHeatmapQuery, IReadOnlyList<CapacitySnapshotDto>>,
     IRequestHandler<GetAiDecisionsQuery, IReadOnlyList<AiDecisionLedgerDto>>,
     IRequestHandler<ReviewAiDecisionCommand, AiDecisionLedgerDto>,
+    IRequestHandler<ManualAssignEscalatedDecisionCommand, AiDecisionLedgerDto>,
     IRequestHandler<ResolveBlockerQuery, ResolveBlockerResponse>
 {
     private readonly IUnitOfWork _unitOfWork;
@@ -103,6 +106,55 @@ public class IntelligenceHandler :
         }
 
         ledgerRepo.Update(decision);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return new AiDecisionLedgerDto(
+            decision.Id,
+            decision.AgentType,
+            decision.TargetEntityType,
+            decision.TargetEntityId,
+            decision.Action,
+            decision.ContextSnapshot,
+            decision.ReasoningChain,
+            decision.ConfidenceScore,
+            decision.Status,
+            decision.ReviewedByUserId,
+            decision.ReviewNotes,
+            decision.ModelVersion,
+            decision.ExecutionTimeMs,
+            decision.CreatedAtUtc,
+            decision.RejectionCount
+        );
+    }
+
+    public async Task<AiDecisionLedgerDto> Handle(ManualAssignEscalatedDecisionCommand request, CancellationToken cancellationToken)
+    {
+        var ledgerRepo = _unitOfWork.Repository<AiDecisionLedger>();
+        var decision = await ledgerRepo.GetByIdAsync(request.DecisionId, cancellationToken)
+            ?? throw new NotFoundException(nameof(AiDecisionLedger), request.DecisionId);
+
+        if (decision.Status != Domain.Enums.AiDecisionStatus.Escalated)
+        {
+            throw new InvalidOperationException($"Decision {request.DecisionId} is in '{decision.Status}' status. Only 'Escalated' decisions can be manually assigned via override.");
+        }
+
+        // Apply task assignment mutation if target is TaskItem
+        if (string.Equals(decision.TargetEntityType, "TaskItem", StringComparison.OrdinalIgnoreCase))
+        {
+            var taskRepo = _unitOfWork.Repository<TaskItem>();
+            var task = await taskRepo.GetByIdAsync(decision.TargetEntityId, cancellationToken)
+                ?? throw new NotFoundException(nameof(TaskItem), decision.TargetEntityId);
+
+            task.Assign(request.AssigneeId);
+            taskRepo.Update(task);
+        }
+
+        var currentUserIdStr = _tenantService.GetCurrentUserId();
+        Guid? reviewerId = Guid.TryParse(currentUserIdStr, out var rId) ? rId : null;
+
+        decision.ManualOverride(reviewerId ?? Guid.Empty, request.AssigneeId, request.Notes);
+        ledgerRepo.Update(decision);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new AiDecisionLedgerDto(
