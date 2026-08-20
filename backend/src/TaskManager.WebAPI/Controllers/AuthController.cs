@@ -18,7 +18,7 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Register a new user.
+    /// Register a new tenant workspace and admin user.
     /// </summary>
     [HttpPost("register")]
     [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status201Created)]
@@ -31,7 +31,7 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Login and receive a JWT token.
+    /// Login and receive a JWT token with tenant isolation claims.
     /// </summary>
     [HttpPost("login")]
     [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]

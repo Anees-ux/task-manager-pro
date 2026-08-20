@@ -1,43 +1,62 @@
 using MediatR;
 using TaskManager.Application.DTOs;
 using TaskManager.Application.Features.Auth.Services;
-using TaskManager.Domain.Entities;
+using TaskManager.Application.Interfaces;
+using TaskManager.Domain.Entities.Workforce;
+using TaskManager.Domain.Entities.Workspace;
+using TaskManager.Domain.Enums;
 using TaskManager.Domain.Interfaces;
 
 namespace TaskManager.Application.Features.Auth.Commands.Register;
 
 public class RegisterHandler : IRequestHandler<RegisterCommand, AuthResponseDto>
 {
-    private readonly IRepository<User> _userRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IJwtTokenService _jwtTokenService;
 
-    public RegisterHandler(IRepository<User> userRepository, IJwtTokenService jwtTokenService)
+    public RegisterHandler(IUnitOfWork unitOfWork, IJwtTokenService jwtTokenService)
     {
-        _userRepository = userRepository;
+        _unitOfWork = unitOfWork;
         _jwtTokenService = jwtTokenService;
     }
 
     public async Task<AuthResponseDto> Handle(RegisterCommand request, CancellationToken cancellationToken)
     {
-        // Check if username already exists
-        var existingUsers = await _userRepository.FindAsync(
+        var userRepo = _unitOfWork.Repository<User>();
+        var tenantRepo = _unitOfWork.Repository<Tenant>();
+
+        // Check if username or email already exists (across all tenants for registration)
+        var existingUser = await userRepo.FirstOrDefaultAsync(
             u => u.Username == request.Username || u.Email == request.Email, cancellationToken);
 
-        if (existingUsers.Any())
+        if (existingUser != null)
             throw new Common.Exceptions.ValidationException(
                 new[] { new FluentValidation.Results.ValidationFailure("Username", "Username or email already exists.") });
 
-        var user = new User
-        {
-            Username = request.Username,
-            Email = request.Email,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            CreatedAt = DateTime.UtcNow
-        };
+        // Create a new tenant for the registering user (they become the admin)
+        var tenant = Tenant.Create(request.Username + "'s Workspace", request.Username + "-workspace", SubscriptionTier.Free);
+        await tenantRepo.AddAsync(tenant, cancellationToken);
 
-        var created = await _userRepository.AddAsync(user, cancellationToken);
-        var token = _jwtTokenService.GenerateToken(created);
+        // Create default tenant settings
+        var settingsRepo = _unitOfWork.Repository<TenantSettings>();
+        var settings = TenantSettings.CreateDefault(tenant.Id);
+        await settingsRepo.AddAsync(settings, cancellationToken);
 
-        return new AuthResponseDto(token, created.Username, created.Email);
+        // Create the user as admin of the new tenant
+        var user = User.Create(
+            tenantId: tenant.Id,
+            username: request.Username,
+            email: request.Email,
+            passwordHash: BCrypt.Net.BCrypt.HashPassword(request.Password),
+            fullName: request.Username, // Default full name to username
+            role: UserRole.Admin
+        );
+
+        await userRepo.AddAsync(user, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var token = _jwtTokenService.GenerateToken(user);
+
+        return new AuthResponseDto(token, user.Username, user.Email);
     }
 }

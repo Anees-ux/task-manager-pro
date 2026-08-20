@@ -4,7 +4,7 @@ using Azure.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi;
+using Microsoft.OpenApi.Models;
 using TaskManager.Application;
 using TaskManager.Infrastructure;
 using TaskManager.Infrastructure.Data;
@@ -12,6 +12,7 @@ using TaskManager.WebAPI.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ─── Optional Azure Key Vault ────────────────────────────────────
 var keyVaultUri = builder.Configuration["KeyVaultUri"];
 if (!string.IsNullOrEmpty(keyVaultUri))
 {
@@ -21,17 +22,16 @@ if (!string.IsNullOrEmpty(keyVaultUri))
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Warning: Could not connect to Azure Key Vault. Using local configuration. Error: {ex.Message}");
+        Console.WriteLine($"Warning: Azure Key Vault connection bypassed. Error: {ex.Message}");
     }
 }
 
-// Add services to the container
-
-// Register Application & Infrastructure layers
+// ─── Add Clean Architecture Layers ──────────────────────────────
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 
-// Configure Controllers with JSON options
+// ─── Configure Controllers with String Enums ─────────────────────
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -39,9 +39,9 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
     });
 
-// Configure JWT Authentication
+// ─── Configure JWT Authentication ────────────────────────────────
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var secretKey = jwtSettings["SecretKey"] ?? "FakeKeyForLocalDevelopmentOnly_WillLoadFromVault";
+var secretKey = jwtSettings["SecretKey"] ?? "TaskManagerProSuperSecretKey2024!@#$%^&*()_+VeryLongKeyForSecurity";
 
 builder.Services.AddAuthentication(options =>
 {
@@ -58,22 +58,23 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = jwtSettings["Issuer"] ?? "TaskManagerPro",
         ValidAudience = jwtSettings["Audience"] ?? "TaskManagerProClient",
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey))
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+        ClockSkew = TimeSpan.Zero
     };
 });
 
 builder.Services.AddAuthorization();
 
-// Configure CORS for React frontend (SIRF YEH SECTION UPDATE HUA HAI)
+// ─── Configure CORS ──────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
         policy.WithOrigins(
-                "http://localhost:5173", 
-                "http://localhost:5174", 
+                "http://localhost:5173",
+                "http://localhost:5174",
                 "http://localhost:3000",
-                "https://orange-river-04719080f.7.azurestaticapps.net" // <-- Live Frontend URL
+                "https://orange-river-04719080f.7.azurestaticapps.net"
             )
             .AllowAnyMethod()
             .AllowAnyHeader()
@@ -81,59 +82,76 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Configure Swagger/OpenAPI (AAPKA ORIGINAL CODE WAPAS AA GAYA)
+// ─── Configure Swagger / OpenAPI ─────────────────────────────────
+// ─── Configure Swagger / OpenAPI ─────────────────────────────────
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "Task Manager Pro API",
+        Title = "TaskManagerPro — Intelligent Execution Engine API",
         Version = "v1",
-        Description = "A RESTful API for managing tasks and projects."
+        Description = "Enterprise multi-tenant backend with Capacity Heatmap Engine, Ripple Effect cascades, and Neural Decision Ledger."
     });
 
-    // Add JWT auth to Swagger
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
-        Type = SecuritySchemeType.Http,
+        Type = SecuritySchemeType.ApiKey,
         Scheme = "Bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "Enter your JWT token"
+        Description = "JWT Authorization header using the Bearer scheme. \r\n\r\n Enter 'Bearer' [space] and then your token in the text input below.\r\n\r\nExample: \"Bearer eyJhbGciOiJIUzI1Ni...\""
     });
 
-    options.AddSecurityRequirement(_ => new OpenApiSecurityRequirement
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
-            new OpenApiSecuritySchemeReference("Bearer"),
-            new List<string>()
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer" // YEH LINE MISSING THI!
+                }
+            },
+            Array.Empty<string>()
         }
     });
 });
 
 var app = builder.Build();
 
-// Apply migrations automatically
+// ─── Auto-Apply Migrations & Seed ────────────────────────────────
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
+    try
+    {
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.Database.Migrate();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Database Migration Notice: {ex.Message}");
+    }
 }
 
-// Configure the HTTP request pipeline
-if (app.Environment.IsDevelopment())
+// ─── Configure HTTP Pipeline ─────────────────────────────────────
+if (app.Environment.IsDevelopment() || true) // Enable Swagger in all environments for testing
 {
     app.UseSwagger();
-    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Task Manager Pro API v1"));
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "TaskManagerPro API v1");
+        c.RoutePrefix = string.Empty; // Serve Swagger at app root
+    });
 }
 
-// Global exception handling middleware
 app.UseMiddleware<GlobalExceptionMiddleware>();
-
 app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
+app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();

@@ -2,7 +2,10 @@ namespace TaskManager.Domain.Enums;
 
 public enum TaskItemStatus
 {
-    Todo = 0,
-    InProgress = 1,
-    Done = 2
+    Backlog = 0,
+    Todo = 1,
+    InProgress = 2,
+    InReview = 3,
+    Done = 4,
+    Cancelled = 5
 }

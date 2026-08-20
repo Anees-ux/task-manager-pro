@@ -6,7 +6,7 @@ using TaskManager.Application.Common.Exceptions;
 namespace TaskManager.WebAPI.Middleware;
 
 /// <summary>
-/// Global exception handling middleware that returns ProblemDetails responses.
+/// Global exception handling middleware that returns standard RFC 7807 ProblemDetails responses.
 /// </summary>
 public class GlobalExceptionMiddleware
 {
@@ -38,7 +38,7 @@ public class GlobalExceptionMiddleware
 
         var problemDetails = exception switch
         {
-            Application.Common.Exceptions.ValidationException validationEx => new ValidationProblemDetails(validationEx.Errors)
+            ValidationException validationEx => new ValidationProblemDetails(validationEx.Errors)
             {
                 Status = (int)HttpStatusCode.BadRequest,
                 Title = "Validation Error",
@@ -49,8 +49,16 @@ public class GlobalExceptionMiddleware
             NotFoundException notFoundEx => new ProblemDetails
             {
                 Status = (int)HttpStatusCode.NotFound,
-                Title = "Not Found",
+                Title = "Resource Not Found",
                 Detail = notFoundEx.Message,
+                Instance = context.Request.Path
+            },
+
+            InvalidOperationException invalidOpEx => new ProblemDetails
+            {
+                Status = (int)HttpStatusCode.BadRequest,
+                Title = "Invalid Domain Operation",
+                Detail = invalidOpEx.Message,
                 Instance = context.Request.Path
             },
 
@@ -66,7 +74,7 @@ public class GlobalExceptionMiddleware
             {
                 Status = (int)HttpStatusCode.InternalServerError,
                 Title = "Internal Server Error",
-                Detail = "An unexpected error occurred. Please try again later.",
+                Detail = "An unexpected error occurred. Please contact support.",
                 Instance = context.Request.Path
             }
         };

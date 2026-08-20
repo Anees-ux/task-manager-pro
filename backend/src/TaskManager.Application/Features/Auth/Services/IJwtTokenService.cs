@@ -1,4 +1,4 @@
-using TaskManager.Domain.Entities;
+using TaskManager.Domain.Entities.Workforce;
 
 namespace TaskManager.Application.Features.Auth.Services;
 

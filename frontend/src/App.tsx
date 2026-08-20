@@ -1,41 +1,23 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
-import ProtectedRoute from './components/common/ProtectedRoute';
+import { AppProviders } from '@app/providers';
+import { AppRouter } from '@app/router';
 import { Toaster } from 'react-hot-toast';
-
-import Login from './features/auth/Login';
-import Register from './features/auth/Register';
-import Dashboard from './pages/Dashboard';
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route 
-            path="/" 
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } 
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Router>
-      <Toaster 
+    <AppProviders>
+      <AppRouter />
+      <Toaster
         position="bottom-right"
         toastOptions={{
+          duration: 4000,
           style: {
-            background: '#1e293b',
-            color: '#fff',
-            border: '1px solid #334155',
+            background: 'var(--tblr-bg-surface)',
+            color: 'var(--tblr-body-color)',
+            border: '1px solid var(--tblr-border-color)',
           },
         }}
       />
-    </AuthProvider>
+    </AppProviders>
   );
 }
 
